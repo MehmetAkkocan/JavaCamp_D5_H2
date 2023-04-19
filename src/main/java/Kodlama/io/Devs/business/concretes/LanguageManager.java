@@ -1,11 +1,15 @@
 package Kodlama.io.Devs.business.concretes;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import Kodlama.io.Devs.business.abstracts.LanguageService;
+import Kodlama.io.Devs.business.requests.CreateLanguageRequest;
+import Kodlama.io.Devs.business.rules.LanguageRules;
+import Kodlama.io.Devs.business.rules.NameEmptyRule;
 import Kodlama.io.Devs.dataAccess.abstracts.LanguageRepository;
 import Kodlama.io.Devs.entities.concretes.Language;
 
@@ -13,57 +17,58 @@ import Kodlama.io.Devs.entities.concretes.Language;
 public class LanguageManager implements LanguageService {
 
     private LanguageRepository languageRepository;
+    private NameEmptyRule nameEmptyRule;
+    private LanguageRules languageRules;
 
     @Autowired
-    public LanguageManager(LanguageRepository languageRepository) {
+    public LanguageManager(LanguageRepository languageRepository, NameEmptyRule nameEmptyRule,
+            LanguageRules languageRules) {
         this.languageRepository = languageRepository;
+        this.nameEmptyRule = nameEmptyRule;
+        this.languageRules = languageRules;
     }
 
     @Override
-    public List<Language> getAll() {
-        return languageRepository.getAll();
+    public List<CreateLanguageRequest> getAll() {
+        List<Language> languages = languageRepository.findAll();
+        List<CreateLanguageRequest> languagesResponses = new ArrayList<CreateLanguageRequest>();
+        for (Language language : languages) {
+            CreateLanguageRequest responseItem = new CreateLanguageRequest();
+            responseItem.setLangName(language.getLangName());
+            languagesResponses.add(responseItem);
+        }
+        return languagesResponses;
     }
 
     @Override
-    public Language getById(int id) {
-        return languageRepository.getById(id);
+    public CreateLanguageRequest getById(int id) {
+        CreateLanguageRequest responseItem = new CreateLanguageRequest();
+        responseItem.setLangName(languageRepository.getReferenceById(id).getLangName());
+        return responseItem;
     }
 
     @Override
-    public void add(Language language) throws Exception {
-        this.isNameEmpty(language);
-        this.isNameExist(language);
-        languageRepository.add(language);
-
+    public void add(CreateLanguageRequest createLanguageRequest) throws Exception {
+        Language language = new Language();
+        language.setLangName(createLanguageRequest.getLangName());
+        nameEmptyRule.isNameEmpty(language.getLangName());
+        languageRules.isNameExist(language);
+        languageRepository.save(language);
     }
 
     @Override
     public void delete(int id) {
-        languageRepository.delete(id);
+        languageRepository.deleteById(id);
     }
 
     @Override
-    public void update(int id, Language language) throws Exception {
-        this.isNameEmpty(language);
-        this.isNameExist(language);
-        languageRepository.update(id, language);
-    }
-
-    @Override
-    public void isNameEmpty(Language language) throws Exception {
-        if (language.getLangName().isEmpty()) {
-            throw new Exception("Programlama dili boş olamaz!");
-        }
-    }
-
-    @Override
-    public void isNameExist(Language language) throws Exception {
-        List<Language> languageList = languageRepository.getAll();
-        for (Language elementLanguage : languageList) {
-            if (language.getLangName().equals(elementLanguage.getLangName())) {
-                throw new Exception("Zaten bu isimde bir programlama dili mevcut!");
-            }
-        }
+    public void update(int id, CreateLanguageRequest createLanguageRequest) throws Exception {
+        Language language = new Language();
+        language.setLangName(createLanguageRequest.getLangName());
+        nameEmptyRule.isNameEmpty(language.getLangName());
+        languageRules.isNameExist(language);
+        language.setId(id);
+        languageRepository.save(language);
     }
 
 }
